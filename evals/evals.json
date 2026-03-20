@@ -1,0 +1,35 @@
+{
+  "skill_name": "openclaw-agent-config-wizard",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想给 OpenClaw 配一个专门管 GitHub PR 的 agent，只在 Slack 的 #eng-bot 里说话，语气专业简短，心跳只检查 assigned review。请用问答引导我并给出完整工作区文件草案。",
+      "expected_output": "Structured interview (or assumptions), then AGENTS/SOUL/IDENTITY/TOOLS/HEARTBEAT drafts plus recommended agent id, workspace path, and bind command for Slack.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我既要私人助理（Telegram DM）又要工作群里的客服风格 bot（Discord），希望记忆不要串台。你建议几个 agent？分别要什么绑定？",
+      "expected_output": "Clear recommendation for two agents with isolated workspaces, routing bindings, and MEMORY.md / group-chat guidance per agent.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "确认。就按你上一版方案执行：写出要运行的 openclaw CLI 命令列表，并说明每个文件写入路径。",
+      "expected_output": "Ordered CLI commands (agents add / bind / set-identity) and absolute or ~/.openclaw-relative paths for each markdown file and skills/ entries.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "我想做个「合规助理」agent，但我不清楚 DPIA、RoPA 这些缩写到底要它干什么。你边解释边用选择题帮我定需求。",
+      "expected_output": "Plain-language glosses of terms, A/B/C style choices, scenario check, then how each maps to AGENTS.md vs skills; no fake legal advice.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "给这个 agent 推荐几个能帮我做 Next.js 性能优化的 skill，我要真实的安装命令。",
+      "expected_output": "Uses find-skills workflow or npx skills find; only lists owner/repo@skill from search results; one primary pick with rationale if multiple overlap; no fabricated packages.",
+      "files": []
+    }
+  ]
+}
