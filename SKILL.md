@@ -1,152 +1,407 @@
 ---
 name: openclaw-agent-config-wizard
 description: >
- Use this skill whenever the user wants to design, bootstrap, or overhaul OpenClaw agent
- behavior — including workspace files (AGENTS.md, SOUL.md, IDENTITY.md, TOOLS.md, HEARTBEAT.md),
- per-workspace skills, multi-agent split, routing bindings, or "帮我配一个专门做 X 的 agent".
- Trigger when the user needs guided setup, plain-language explanations of OpenClaw or domain
- jargon, example answers to choose from, or vertical-domain agents (legal, medical admin,
- finance ops, SRE, etc.) where they may not know technical terms. Also trigger on OpenClaw 配置、
- agent 人设、工作区、多智能体、频道绑定、heartbeat、skills、从零搭助手. When recommending
- installable skills from the skills.sh ecosystem, this skill pairs with **find-skills**:
- discover real packages via `npx skills find`, never invent skill names. Do not use for
- unrelated generic prompts with no OpenClaw/runtime context.
+  当用户说"帮我配置一个专门做 X 的 agent"、"创建一个新 agent"、"设计一个 agent"、
+  "配置 agent 人设"、"设置工作区"、"配置多智能体"、"设置 heartbeat"、
+  或任何需要引导式问答来创建或配置 OpenClaw agent 的场景时触发。
+  Use this skill whenever the user needs guided setup for an OpenClaw agent
+  through step-by-step questions with dynamic options.
 ---
 
-# OpenClaw Agent 配置向导（问答式）
+# OpenClaw Agent 配置向导（动态问答式）
 
-你是 OpenClaw 的 **agent 工作区与多智能体架构**向导。通过结构化问答弄清需求，产出可落地的 Markdown 与 skills 方案；在用户明确确认后，给出 **CLI 应用步骤**并（若环境允许）**写入文件**，最后汇报路径。
+通过**单问题 + 动态选项**引导用户完成 agent 配置。
 
-## 先对齐事实（必读）
+## 交互状态
 
-OpenClaw 里 **每个 agent** 有独立 **workspace**（默认 cwd + 上下文文件）和 **agentDir**（鉴权/模型注册等）。`TOOLS.md` **只提供说明**，不开关工具。`skills/` 在工作区下时按 agent 隔离；全局还有 `~/.openclaw/skills`。
+在对话中维护状态（不需要存储，随时从对话历史推断）：
 
-更深的路径与命令速查：阅读 `references/openclaw-paths.md`。 
-与上游模板保持语气/结构一致时，可参考仓库内 `docs/reference/templates/AGENTS.md` 与 `docs/concepts/agent-workspace.md`。
-
-更细的 **问答话术、举例模板、术语表**：按需阅读 `references/conversation-patterns.md`（尤其是垂直领域或用户表示「不懂术语」时）。
-
-**推荐可安装的生态 skill**（非工作区手写）：必须先遵循 **`find-skills`** 的流程，并阅读 `references/external-skills.md`。禁止编造不存在的 `owner/repo@skill` 或 skills.sh 链接。
-
-## 对话原则：建议、举例与降术语（贯穿各阶段）
-
-用户不是来考试的；你的问题是 **脚手架**，不是空卷子。
-
-1. **结合上文给「可点的选项」** 
- 每轮 3～6 个问题中，至少一半在问题后附 **2～3 个示例回答**（A/B/C 或短句），并写清「或按你的实际情况改」。选项要从用户已说的场景 **推导**，避免通用废话。
-
-2. **专业 agent / 行业黑话** 
- 当用户抛出职位、流程或缩写却 **没有可操作细节** 时：先用 **一句话**解释该词在你理解里指什么，再给 **一个小场景**（「典型一次任务从头到尾」），问「是不是这样」；确认后再写进 `SOUL.md` / `AGENTS.md`。不要假装精通受监管行业的法律结论——用「协助整理信息、提醒、草稿」等边界表述，红线写清楚。
-
-3. **OpenClaw 专有名词** 
- 第一次提到 workspace、binding、heartbeat、session、`TOOLS.md` 等时，用 **括注或紧随的一句人话**说明（详见 `conversation-patterns.md` 表格）。用户若完全新手，可主动给「最小心智图」再进入深挖。
-
-4. **控制信息量** 
- 举例每条 **一两句**；长流程用 **编号步骤草稿** 请用户删改，而不是一次灌满最终 `AGENTS.md`。
-
-5. **用户纠正优先** 
- 一旦用户说「不是这个意思」，以 **其表述为准** 更新后续所有文件用语，并简短复述确认。
-
-## 工作方式（分阶段，不要跳步）
-
-### 阶段 1 — 需求挖掘（一次问 3～6 个问题，可分批）
-
-用简短、可回答的问题推进；**默认在每条问题后跟建议选项或微型场景**（见上节）。缺省时要 **标明假设**，并请用户确认。
-
-至少覆盖这些维度（按场景删减）：
-
-1. **角色与成功标准**：这个 agent 要解决什么问题？怎样算做得好？
-2. **渠道与受众**：哪些频道（DM / 群）？群聊里要不要少说话、用反应代替回复？
-3. **语气与边界**：正式/幽默/简短；什么绝对不能做；是否需要多语言。
-4. **工具与习惯**：常用 CLI、浏览器、日历、邮件、代码仓；有无固定目录或别名（写入 `TOOLS.md` 备注，不写密钥）。
-5. **心跳与定时**：要不要周期性自检；与 cron 分工（精确时刻 → cron；批量轻量检查 → `HEARTBEAT.md`）。
-6. **记忆策略**：是否需要强隔离（例如工作/私人）；群聊是否禁止依赖 `MEMORY.md`。
-7. **是否已有 agent**：只改 `main` 的工作区，还是新建独立 `agentId`？
-
-**禁止**在 Markdown 里写入真实 API Key、token、密码；用占位符并提示用 `openclaw` 凭证流程。
-
-### 阶段 2 — 架构建议（单 agent vs 多 agent）
-
-默认从 **一个 workspace** 开始；在以下情况 **主动建议**多个独立 agent（各自 workspace + `openclaw agents add` + `bind`）：
-
-- 人设、安全边界或记忆策略明显冲突（例如「私人日记」vs「对外客服」）。
-- 需要不同 **默认模型 / 思考强度 / 沙箱**（可在方案里注明，落地时对齐 `openclaw.json`）。
-- 不同 **入站路由**（例如 Telegram 私人 vs Slack 工作区）且不希望会话串线。
-
-给出简洁对比表：**agentId | 用途 | workspace 路径建议 | 绑定频道摘要**；若用户非技术背景，可加一列 **一句话场景**（「什么时候消息会进这个 agent」）。
-
-### 阶段 3 — 产出草案（用户确认前）
-
-为 **每个** agent 输出以下块（使用 Markdown 代码块或分节，便于复制）：
-
-1. **`AGENTS.md`** — 会话启动顺序、记忆规则、红线、群聊发言策略、与 `HEARTBEAT.md` 的关系；与 OpenClaw 默认心跳提示一致处可引用官方表述。
-2. **`SOUL.md`** — 人格、口吻、价值观、边界（短而稳定，避免把流程性内容全堆这里）。
-3. **`IDENTITY.md`** — Name / vibe / emoji（与 CLI `set-identity` 一致、可解析的简短结构）。
-4. **`TOOLS.md`** — 本地环境与命令习惯说明；明确「不承载密钥」。
-5. **`HEARTBEAT.md`** — 极简清单（空壳标题会触发跳过心跳的逻辑，避免只放 `# Title` 无内容）；条目要少。
-6. **`USER.md`** — 建议一并生成（操作者如何称呼、偏好、时区等），除非用户明确不需要。
-7. **Skills（分两类，勿混用）** 
- - **生态可安装 skill（skills.sh）** 
- - **必须**使用 **`find-skills`** skill 的指导：用 `npx skills find <query>`（及必要时换关键词）得到**真实**结果；只引用命令输出或 skills.sh 上存在的 **`npx skills add owner/repo@skill-name`** 与链接。 
- - **禁止**凭想象写包名、仓库路径或「某个 skill」却不给出可验证来源。 
- - 若检索到多条同质 skill：**根据用户上下文只主推 1 条**（备选最多 1 条），并说明取舍理由（栈、维护者、与 OpenClaw 使用场景是否匹配）。详见 `references/external-skills.md`。 
- - 检索无命中：明确说「当前未找到匹配包」，再建议 **工作区自定义** 或 `npx skills init`，不要虚构生态包。 
- - **工作区专属自定义 skill**（`workspace/skills/<dir>/SKILL.md`） 
- - 仅用于用户**独有流程/术语**、生态无法覆盖的部分；每个目录的 `name`、`description` 与正文提纲可在此起草。 
- - 在交付清单里 **标注「自定义」**，与「待安装生态包」分开列，避免用户误以为已内置。 
- - 若用户已有全局 `~/.openclaw/skills`，提醒命名冲突与覆盖规则；**不要**把未安装的生态 skill 当成已存在。
-
-若用户只要改现有 `main`，说明 **仅覆盖** `~/.openclaw/workspace`（或配置中的 `agent.workspace`）下文件，**不要**建议 `agents add main`。
-
-### 阶段 4 — 评审与迭代
-
-停顿并询问：**是否有补充或修改**（渠道、语气、心跳项、多 agent 拆分）。根据反馈只改相关章节，保持 diff 可理解。
-
-### 阶段 5 — 用户确认后的落地（「自动创建」）
-
-当用户明确表示 **确认 / 就按这个执行 / 落地** 时：
-
-1. **主 agent（`main`）** 
- - 将各文件 **写入该 agent 的 workspace 根目录**（路径从用户 `openclaw.json` 或默认 `~/.openclaw/workspace` 解析）。 
- - 仅对 **自定义** skill：在 `skills/<name>/SKILL.md` 下创建文件（目录不存在则创建）。 
- - 对 **生态 skill**：只输出用户需在终端执行的 **`npx skills add ...`**（来自 `npx skills find` 的**真实**结果），**不要**在 workspace 里伪造同名包目录冒充官方 skill。 
- - 运行：`openclaw agents set-identity --agent main --from-identity`（若写的是 `main` 的 `IDENTITY.md`）。
-
-2. **新 agent（非 `main`）** 
- - 对每个新 id 执行（非交互）： 
- `openclaw agents add <agentId> --workspace <绝对路径> --non-interactive` 
- - 再写入该 workspace 下全部 Markdown 与 `skills/`。 
- - 按需：`openclaw agents bind --agent <agentId> --bind <channel>[:account]...` 
- - 按需：`openclaw agents set-identity --agent <agentId> --from-identity`
-
-3. **验证建议**（写入后汇报前执行或提示用户执行）： 
- `openclaw agents list --bindings` 
- 以及快速检查文件是否存在于声明路径。
-
-4. **最终汇报**（始终给出） 
- - 每个 agentId 
- - workspace 根路径 
- - 已创建或更新的文件列表（相对 workspace 根） 
- - `skills/` 下新增目录（仅自定义 skill） 
- - 待安装的 **`npx skills add owner/repo@skill`**（若有，须与 find 结果一致） 
- - 已执行或待执行的 CLI 命令列表 
-
-若当前环境 **无法**执行 shell（例如只读沙箱），则输出 **完整可复制的命令与路径清单**，并说明需用户在装有 OpenClaw 的机器上执行。
-
-## 写作原则（效果优先）
-
-- **短文件胜过长文**：`HEARTBEAT.md` 尤其要短，节省 token。 
-- **可执行**：`AGENTS.md` 里是行为规则，不是产品宣传稿。 
-- **安全默认**：群聊默认保守；敏感记忆写 `MEMORY.md` 时强调「仅主会话」。 
-- **与官方行为一致**：不要编造不存在的配置键；不确定时查仓库 `docs/` 或声明「需查本地 openclaw.json」。
-
-## 不要做的事
-
-- 不要把本 skill 当成通用「写小说/做 PPT」助手；无关请求应拒绝或极简回答。 
-- 不要替用户承诺云端服务可用性或绕过 OpenClaw 安全策略。 
-- 不要创建名为 `main` 的新 agent（保留给默认）。 
-- **不要编造** skills.sh / `npx skills find` 生态中不存在的 skill 包名、仓库或链接；推荐可安装 skill 前须走 **`find-skills`**（及实际检索或等价可验证来源）。
+| 字段 | 说明 |
+|------|------|
+| current_question | 当前问题编号 |
+| answered | 已回答的问题及答案（从历史推断）|
+| context | 累积的配置上下文 |
 
 ---
 
-完成一次完整交付后，可提醒用户查阅：https://docs.openclaw.ai/concepts/agent-workspace 与 https://docs.openclaw.ai/concepts/multi-agent
+## 问题流程
+
+### 问题 1 (P0 - 最优先)
+**问题**: 你希望这个 agent 做什么？
+
+**选项**:
+- A. 整理和收集数据（如 KOL 数据、爬虫、文件）
+- B. 自动化任务执行（如定时任务、CI/CD、部署）
+- C. 监控和告警（如服务器状态、日志、预算提醒）
+- D. 客服支持（如回答问题、处理请求）
+- E. 其他（请说明）
+
+**下一问题**: q2_scope
+
+---
+
+### 问题 2 (P1 - 范围细化)
+根据问题1的答案，动态生成问题。
+
+**如果选 A（整理数据）**:
+问题: 整理什么类型的数据？
+
+选项:
+- A. 视频数据（B站、YouTube 等）
+- B. 社交媒体帖子（小红书、微博等）
+- C. 文档和文章（公众号、知乎等）
+- D. 文件和目录（本地文件、云存储等）
+
+**如果选 B（自动化任务）**:
+问题: 执行什么类型的任务？
+
+选项:
+- A. 定时任务（每小时/每天/每周执行）
+- B. 代码部署（GitHub Actions、CI/CD）
+- C. 数据同步（数据库、API 数据同步）
+- D. 其他自动化
+
+**如果选 C（监控告警）**:
+问题: 监控什么？
+
+选项:
+- A. 服务器资源（CPU、内存、磁盘）
+- B. 应用状态（服务是否在线、错误日志）
+- C. 预算和用量（API 调用量、云服务费用）
+- D. 其他监控对象
+
+**如果选 D（客服支持）**:
+问题: 提供什么类型的支持？
+
+选项:
+- A. 回答用户问题
+- B. 处理订单和请求
+- C. 引导用户操作
+- D. 其他客服场景
+
+**如果选 E（其他）**:
+问题: 请简要描述你需要的场景
+
+**下一问题**: q3_channel
+
+---
+
+### 问题 3 (P1 - 频道)
+问题: 这个 agent 会用在哪些频道？
+
+选项:
+- A. 钉钉私聊 (DM)
+- B. 钉钉群
+- C. WebChat
+- D. Telegram
+- E. 多频道都要
+
+**下一问题**: q4_frequency
+
+---
+
+### 问题 4 (P2 - 频率)
+问题: 这个 agent 多久会使用一次？
+
+选项:
+- A. 每天多次（高频使用）
+- B. 每天一次
+- C. 偶尔使用（按需触发）
+- D. 需要定时自动执行
+
+**如果选 D（定时执行）**:
+追问: 定时频率是？
+
+选项:
+- A. 每小时
+- B. 每天（指定时间）
+- C. 每周
+- D. 自定义（稍后配置）
+
+**下一问题**: q5_memory
+
+---
+
+### 问题 5 (P3 - 记忆)
+问题: 是否需要记住跨会话的信息？
+
+选项:
+- A. 需要（长期记忆用户偏好、上下文）
+- B. 不需要（每次会话独立）
+- C. 不确定
+
+**下一问题**: 检查是否达到最小信息量
+
+---
+
+## 停止条件
+
+当收集到以下信息时，停止问答并生成方案草稿：
+
+- ✅ 核心功能（问题1）
+- ✅ 范围细化（问题2）
+- ✅ 使用频道（问题3）
+
+**可选增强**:
+- 频率/定时（问题4）
+- 记忆需求（问题5）
+
+---
+
+## 方案生成
+
+基于收集的 context，生成以下配置文件草稿：
+
+### 1. AGENTS.md
+```markdown
+# [Agent Name] - 工作区配置
+
+## 角色与职责
+- 核心功能：[基于问题1的回答]
+- 适用范围：[基于问题2的回答]
+
+## 启动规则
+- 读取：SOUL.md、IDENTITY.md、USER.md
+- 启动时：[根据场景描述]
+
+## 群聊策略（如适用）
+- 被动触发时减少噪音
+- 仅在明确需要时回复
+
+## 定时任务（如配置）
+- 任务类型：[基于问题4]
+- 执行频率：[具体时间]
+```
+
+### 2. SOUL.md
+```markdown
+# SOUL.md - 人格与边界
+
+## 核心性格
+[根据用户选择的场景定制]
+
+## 沟通风格
+- 简洁、直接
+- 技术导向
+
+## 边界
+- 不做 [根据场景排除的事项]
+- 需要确认：[需要用户确认的事项]
+```
+
+### 3. IDENTITY.md
+```markdown
+# IDENTITY.md - 身份标识
+
+## 名称
+[用户指定或根据场景生成]
+
+## 角色
+[一句话描述]
+
+## Emoji
+[根据场景选择]
+```
+
+---
+
+## 交互格式规范
+
+### 问题格式
+- 使用简短句子
+- 直接提问，不加解释
+- 选项用字母标记
+
+好例子：
+> 这个 agent 要解决什么问题？
+> - A. 整理数据
+> - B. 自动化任务
+> - C. 监控告警
+
+不好例子：
+> 我需要问你一些问题来了解你的需求。请问这个agent主要的核心功能和目的是什么呢？
+
+### 状态推断
+不需要维护持久状态。从对话历史中推断用户已回答的问题和答案。
+
+### 方案展示
+生成方案后，用以下格式展示：
+
+```markdown
+## 方案草稿
+
+### Agent 信息
+| 项目 | 内容 |
+|------|------|
+| **Agent ID** | [用户指定] |
+| **名称** | [用户指定] |
+| **频道** | [选择的频道] |
+
+### 配置文件
+| 文件 | 用途 |
+|------|------|
+| AGENTS.md | 工作区规则 |
+| SOUL.md | 人格定义 |
+| IDENTITY.md | 身份标识 |
+| HEARTBEAT.md | 定时自检（如需要）|
+
+### 定时任务（如有）
+| 任务 | 频率 | 说明 |
+|------|------|------|
+| [任务名] | [频率] | [说明] |
+
+### 下一步
+
+请确认：
+1. 有哪些需要修改的地方？
+2. 是否需要添加其他配置？
+3. 确认后我可以帮你创建这些文件。
+```
+
+---
+
+## 技术细节
+
+### 问题优先级
+P0 最先问，P3 最后问。 P0 问题缺失则无法生成有效方案。
+
+### 选项动态生成
+后续问题的选项基于前序答案生成，不是固定选项表。这要求在生成问题时：
+1. 读取前序问题的答案
+2. 根据答案组合推断最可能的选项
+3. 生成 2-4 个相关选项
+
+### 错误处理
+如果用户回答模糊或不确定：
+- 简要确认理解
+- 提供最有可能是正确的选项
+- 必要时提供"其他"选项
+
+---
+
+## ⚠️ 关键注意事项（实施阶段必读）
+
+### 1. Workspace 路径
+**必须使用正确路径格式：**
+```bash
+# ✅ 正确 - 使用 ~/.openclaw/workspace/
+~/.openclaw/workspace/<agentId>
+
+# ❌ 错误 - 不要使用 ~/openclaw/workspace/
+~/openclaw/workspace/<agentId>  # 这会变成 /Users/thomas/openclaw/workspace/
+```
+
+**原因**：`~` 在 shell 中展开为 `/Users/thomas`，但 OpenClaw 的配置目录是 `/Users/thomas/.openclaw/`（有 `.`）。
+
+### 2. 创建 Agent 命令
+```bash
+openclaw agents add <agentId> \
+  --workspace ~/.openclaw/workspace/<agentId> \
+  --non-interactive
+```
+
+**注意**：必须使用 `~/.openclaw/workspace/` 格式。
+
+### 3. 文件写入路径
+写入配置文件时，必须使用**绝对路径**：
+```bash
+# ✅ 正确
+path: /Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md
+
+# ❌ 错误 - 不要使用 ~ 开头
+path: ~/openclaw/workspace/<agentId>/AGENTS.md  # 这是错误的！
+```
+
+**在 exec 命令中**，`~` 可以展开：
+```bash
+mkdir -p ~/.openclaw/workspace/<agentId>
+```
+
+**在 write 工具中**，必须使用绝对路径：
+```json
+{"path": "/Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md"}
+```
+
+### 4. Cron 任务必须指定 agentId
+创建定时任务时，**必须**包含 `agentId` 字段：
+
+```json
+{
+  "id": "<unique-id>",
+  "agentId": "<新创建的agentId>",
+  "name": "<任务名称>",
+  "schedule": {...},
+  "payload": {...},
+  "delivery": {...},
+  "sessionTarget": "isolated",
+  "enabled": true
+}
+```
+
+**常见错误**：忘记添加 `agentId` 导致定时任务发送到 main agent。
+
+### 5. 钉钉绑定
+```bash
+openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
+```
+
+**注意**：`accountId` 是用户的钉钉账号 ID，不是 Client ID。
+
+---
+
+## Phase 5: 用户确认后的实施
+
+当用户明确表示**确认 / 就按这个执行 / 落地**时，执行以下步骤：
+
+### 步骤 1：确认 Workspace 路径
+使用绝对路径格式：`/Users/thomas/.openclaw/workspace/<agentId>/`
+
+### 步骤 2：创建 Agent
+```bash
+mkdir -p ~/.openclaw/workspace/<agentId>
+openclaw agents add <agentId> \
+  --workspace ~/.openclaw/workspace/<agentId> \
+  --non-interactive
+```
+
+### 步骤 3：写入配置文件
+使用绝对路径写入：
+- `/Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md`
+- `/Users/thomas/.openclaw/workspace/<agentId>/SOUL.md`
+- `/Users/thomas/.openclaw/workspace/<agentId>/IDENTITY.md`
+- `/Users/thomas/.openclaw/workspace/<agentId>/HEARTBEAT.md`
+- `/Users/thomas/.openclaw/workspace/<agentId>/USER.md`
+
+### 步骤 4：绑定钉钉频道
+```bash
+openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
+```
+
+### 步骤 5：创建定时任务（如有）
+使用 `cron action=add` 创建定时任务，**必须包含 `agentId` 字段**。
+
+### 步骤 6：验证
+```bash
+openclaw agents list
+openclaw agents list --bindings
+```
+
+---
+
+## 实施检查清单
+
+完成创建后，逐项确认：
+
+- [ ] `openclaw agents list` 能看到新 agent
+- [ ] Workspace 目录存在于 `~/.openclaw/workspace/<agentId>/`
+- [ ] 配置文件已写入正确位置
+- [ ] `openclaw agents list --bindings` 显示正确的绑定
+- [ ] 定时任务（如有）包含正确的 `agentId`
+- [ ] 用户在钉钉 @bot 有回复
+
+---
+
+## 参考
+
+- OpenClaw 工作区文档：https://docs.openclaw.ai/concepts/agent-workspace
+- 多智能体配置：https://docs.openclaw.ai/concepts/multi-agent
