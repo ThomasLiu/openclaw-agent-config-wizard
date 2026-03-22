@@ -89,7 +89,7 @@ description: >
 ### 问题 3 (P1 - 频道)
 问题: 这个 agent 会用在哪些频道？
 
-选项:
+**选项**:
 - A. 钉钉私聊 (DM)
 - B. 钉钉群
 - C. WebChat
@@ -250,6 +250,12 @@ description: >
 |------|------|------|
 | [任务名] | [频率] | [说明] |
 
+### 频道配置
+根据选择的频道，配置对应的 channel plugin：
+- 钉钉：配置 appKey/appSecret 或 webhook
+- Telegram：配置 bot token
+- 其他：请参考对应插件文档
+
 ### 下一步
 
 请确认：
@@ -300,8 +306,6 @@ openclaw agents add <agentId> \
   --non-interactive
 ```
 
-**注意**：必须使用 `~/.openclaw/workspace/` 格式。
-
 ### 3. 文件写入路径
 写入配置文件时，必须使用**绝对路径**：
 ```bash
@@ -340,12 +344,52 @@ mkdir -p ~/.openclaw/workspace/<agentId>
 
 **常见错误**：忘记添加 `agentId` 导致定时任务发送到 main agent。
 
-### 5. 钉钉绑定
+### 5. 频道绑定
 ```bash
-openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
+openclaw agents bind --agent <agentId> --bind <channel>:<accountId>
 ```
 
-**注意**：`accountId` 是用户的钉钉账号 ID，不是 Client ID。
+**说明**：
+- `channel` 是频道类型（如 dingtalk、telegram、wecom 等）
+- `accountId` 是该频道的账号标识，**不是** API Key 或 Token
+- 如果不确定 accountId，可以先运行 `openclaw channels status` 查看
+
+### 6. 渠道配置失败排查流程
+
+如果渠道配置失败，按以下步骤排查：
+
+**步骤 1：检查插件状态**
+```bash
+openclaw channels status
+```
+
+**步骤 2：检查插件配置**
+```bash
+openclaw config get channels.<channelName>
+```
+
+**步骤 3：搜索 GitHub Issues**
+搜索对应渠道插件的 GitHub 仓库：
+
+| 渠道 | GitHub 仓库 |
+|------|------------|
+| 钉钉 | https://github.com/openclaw/dingtalk |
+| 企业微信 | https://github.com/openclaw/wecom |
+| Telegram | https://github.com/openclaw/telegram |
+
+搜索关键词：
+- `binding failed`
+- `accountId` + `not found`
+- 具体的错误信息
+
+**步骤 4：查看插件源码**
+如果 GitHub 没有解决方案，查看插件源码：
+```bash
+cat ~/.openclaw/extensions/<plugin-name>/dist/index.js
+```
+
+或者查看 OpenClaw 文档：
+- https://docs.openclaw.ai/channels
 
 ---
 
@@ -372,10 +416,15 @@ openclaw agents add <agentId> \
 - `$HOME/.openclaw/workspace/<agentId>/HEARTBEAT.md`
 - `$HOME/.openclaw/workspace/<agentId>/USER.md`
 
-### 步骤 4：绑定钉钉频道
-```bash
-openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
-```
+### 步骤 4：配置频道
+根据用户选择的频道配置：
+
+**钉钉**：
+1. 在钉钉开放平台创建应用，获取 AppKey 和 AppSecret
+2. 配置到 `openclaw.json` 的 `channels.dingtalk` 部分
+3. 绑定：`openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>`
+
+**其他频道**：参考 https://docs.openclaw.ai/channels
 
 ### 步骤 5：创建定时任务（如有）
 使用 `cron action=add` 创建定时任务，**必须包含 `agentId` 字段**。
@@ -384,6 +433,7 @@ openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
 ```bash
 openclaw agents list
 openclaw agents list --bindings
+openclaw channels status
 ```
 
 ---
@@ -396,8 +446,27 @@ openclaw agents list --bindings
 - [ ] Workspace 目录存在于 `~/.openclaw/workspace/<agentId>/`
 - [ ] 配置文件已写入正确位置
 - [ ] `openclaw agents list --bindings` 显示正确的绑定
+- [ ] `openclaw channels status` 显示频道正常
 - [ ] 定时任务（如有）包含正确的 `agentId`
-- [ ] 用户在钉钉 @bot 有回复
+- [ ] 用户在对应频道 @bot 有回复
+
+---
+
+## 常见问题
+
+### Q: 钉钉机器人没有回复？
+A: 检查以下几点：
+1. `openclaw channels status` 是否显示 dingtalk 正常
+2. 绑定是否正确：`openclaw agents list --bindings`
+3. 是否在钉钉开放平台配置了机器人消息接收地址
+4. 钉钉应用的权限是否包含「接收消息」
+
+### Q: 定时任务没有执行？
+A: 检查以下几点：
+1. `cron list` 查看任务是否存在
+2. 检查任务的 `agentId` 是否正确
+3. 查看 `cron runs <jobId>` 查看最近执行状态
+4. 检查任务的 `state.nextRunAtMs` 是否合理
 
 ---
 
@@ -405,3 +474,4 @@ openclaw agents list --bindings
 
 - OpenClaw 工作区文档：https://docs.openclaw.ai/concepts/agent-workspace
 - 多智能体配置：https://docs.openclaw.ai/concepts/multi-agent
+- 渠道配置：https://docs.openclaw.ai/channels
