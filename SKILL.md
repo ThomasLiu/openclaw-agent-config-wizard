@@ -288,10 +288,10 @@ P0 最先问，P3 最后问。 P0 问题缺失则无法生成有效方案。
 ~/.openclaw/workspace/<agentId>
 
 # ❌ 错误 - 不要使用 ~/openclaw/workspace/
-~/openclaw/workspace/<agentId>  # 这会变成 /Users/thomas/openclaw/workspace/
+~/openclaw/workspace/<agentId>  # 这会变成 /Users/<username>/openclaw/workspace/
 ```
 
-**原因**：`~` 在 shell 中展开为 `/Users/thomas`，但 OpenClaw 的配置目录是 `/Users/thomas/.openclaw/`（有 `.`）。
+**原因**：`~` 在 shell 中展开为 `/Users/<username>`，但 OpenClaw 的配置目录默认在 `~/.openclaw/`（有 `.`）。
 
 ### 2. 创建 Agent 命令
 ```bash
@@ -306,9 +306,9 @@ openclaw agents add <agentId> \
 写入配置文件时，必须使用**绝对路径**：
 ```bash
 # ✅ 正确
-path: /Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md
+path: $HOME/.openclaw/workspace/<agentId>/AGENTS.md
 
-# ❌ 错误 - 不要使用 ~ 开头
+# ❌ 错误 - 不要使用 ~ 开头（在 write 工具中）
 path: ~/openclaw/workspace/<agentId>/AGENTS.md  # 这是错误的！
 ```
 
@@ -319,7 +319,7 @@ mkdir -p ~/.openclaw/workspace/<agentId>
 
 **在 write 工具中**，必须使用绝对路径：
 ```json
-{"path": "/Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md"}
+{"path": "$HOME/.openclaw/workspace/<agentId>/AGENTS.md"}
 ```
 
 ### 4. Cron 任务必须指定 agentId
@@ -354,7 +354,7 @@ openclaw agents bind --agent <agentId> --bind dingtalk:<accountId>
 当用户明确表示**确认 / 就按这个执行 / 落地**时，执行以下步骤：
 
 ### 步骤 1：确认 Workspace 路径
-使用绝对路径格式：`/Users/thomas/.openclaw/workspace/<agentId>/`
+使用绝对路径格式：`$HOME/.openclaw/workspace/<agentId>/`
 
 ### 步骤 2：创建 Agent
 ```bash
@@ -365,12 +365,12 @@ openclaw agents add <agentId> \
 ```
 
 ### 步骤 3：写入配置文件
-使用绝对路径写入：
-- `/Users/thomas/.openclaw/workspace/<agentId>/AGENTS.md`
-- `/Users/thomas/.openclaw/workspace/<agentId>/SOUL.md`
-- `/Users/thomas/.openclaw/workspace/<agentId>/IDENTITY.md`
-- `/Users/thomas/.openclaw/workspace/<agentId>/HEARTBEAT.md`
-- `/Users/thomas/.openclaw/workspace/<agentId>/USER.md`
+使用绝对路径写入（以 `$HOME` 开头）：
+- `$HOME/.openclaw/workspace/<agentId>/AGENTS.md`
+- `$HOME/.openclaw/workspace/<agentId>/SOUL.md`
+- `$HOME/.openclaw/workspace/<agentId>/IDENTITY.md`
+- `$HOME/.openclaw/workspace/<agentId>/HEARTBEAT.md`
+- `$HOME/.openclaw/workspace/<agentId>/USER.md`
 
 ### 步骤 4：绑定钉钉频道
 ```bash
